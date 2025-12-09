@@ -1,4 +1,4 @@
-# Next.js Example
+# Next.js 15 Example
 
 This sample shows how to use alphaTab with next.js.
 
