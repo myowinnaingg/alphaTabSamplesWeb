@@ -1,0 +1,63 @@
+.alphaTab {
+  /* General Layout */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+}
+
+.alphaTab-controls {
+  /* Player Controls */
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px;
+  background-color: #333;
+}
+
+.alphaTab-button {
+  /* Button Styles */
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.alphaTab-button:hover {
+  /* Button Hover Effect */
+  background-color: #45a049;
+}
+
+.alphaTab-responsive {
+  /* Responsive Layout */
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .alphaTab {
+    flex-direction: column;
+  }
+  .alphaTab-controls {
+    flex-direction: column;
+  }
+}
+
+.alphaTab-theme-light {
+  /* Light Theme */
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+.alphaTab-theme-dark {
+  /* Dark Theme */
+  background-color: #222;
+  color: #fff;
+}
