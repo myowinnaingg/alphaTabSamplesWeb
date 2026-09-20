@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AlphaTab Full Player with File Loader</title>
+    <!-- alphaTab နှင့် FontAwesome CDN ချိတ်ဆက်ခြင်း -->
+    <script src="https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/alphaTab.js"></script>
+    <script src="https://kit.fontawesome.com/b43f0e512e.js"></script>
+    <style type="text/css">
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 12px;
+        margin: 0;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+      .at-wrap {
+        width: 80vw;
+        height: 80vh;
+        margin: 0 auto;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+        background: #fff;
+      }
+      .at-content {
+        position: relative;
+        overflow: hidden;
+        flex: 1 1 auto;
+      }
+      /** Sidebar (Hover မောက်စ်တင်ပါက ကျယ်လာမည်) **/
+      .at-sidebar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        max-width: 70px;
+        width: auto;
+        display: flex;
+        align-content: stretch;
+        z-index: 1001;
+        overflow: hidden;
+        border-right: 1px solid rgba(0, 0, 0, 0.12);
+        background: #f7f7f7;
+      }
+      .at-sidebar:hover {
+        max-width: 400px;
+        transition: max-width 0.2s;
+        overflow-y: auto;
+      }
+      .at-viewport {
+        overflow-y: auto;
+        position: absolute;
+        top: 0;
+        left: 70px;
+        right: 0;
+        bottom: 0;
+        padding-right: 20px;
+      }
+      .at-controls {
+        flex: 0 0 auto;
+        background: #436d9d;
+        color: #fff;
+        padding: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .at-controls button, .at-controls select {
+        padding: 6px 12px;
+        cursor: pointer;
+        border: none;
+        border-radius: 3px;
+        background: #fff;
+        color: #333;
+        font-weight: bold;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .at-controls button:hover {
+        background: #e0e0e0;
+      }
+      /** Loading Overlay **/
+      .at-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1002;
+        backdrop-filter: blur(3px);
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+      }
+      .at-overlay-content {
+        margin-top: 20px;
+        background: #fff;
+        box-shadow: 0px 5px 10px 0px rgba(0, 0, 0, 0.3);
+        padding: 10px;
+        color: #000;
+      }
+      /** Track selector **/
+      .at-track {
+        display: flex;
+        position: relative;
+        padding: 5px;
+        transition: background 0.2s;
+        cursor: pointer;
+      }
+      .at-track:hover {
+        background: rgba(0, 0, 0, 0.1);
+      }
+      .at-track > .at-track-icon,
+      .at-track > .at-track-details {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .at-track > .at-track-icon {
+        flex-shrink: 0;
+        font-size: 32px;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+        width: 64px;
+        height: 64px;
+        margin-right: 5px;
+        align-items: center;
+      }
+      .at-track-name {
+        font-weight: bold;
+        margin-bottom: 5px;
+      }
+      .at-track:hover > .at-track-icon {
+        opacity: 0.8;
+      }
+      .at-track.active {
+        background: rgba(0, 0, 0, 0.03);
+      }
+      .at-track.active > .at-track-icon {
+        color: #4972a1;
+        opacity: 1;
+      }
+      .at-track > .at-track-name {
+        font-weight: 500;
+      }
+      /* Cursor & Highlight Styles */
+      .at-cursor-bar {
+        background: rgba(255, 242, 0, 0.25);
+      }
+      .at-cursor-beat {
+        background: rgba(64, 64, 255, 0.75);
+        width: 3px;
+      }
+      .at-highlight * {
+        fill: #0078ff;
+        stroke: #0078ff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="at-wrap">
+      <!-- Loading Overlay -->
+      <div class="at-overlay">
+        <div class="at-overlay-content">
+          Music sheet is loading
+        </div>
+      </div>
+      <div class="at-content">
+        <!-- Sidebar for Track Selector -->
+        <div class="at-sidebar">
+          <div class="at-sidebar-content">
+            <div class="at-track-list"></div>
+          </div>
+        </div>
+        <!-- Main Viewport for Music Sheet -->
+        <div class="at-viewport">
+          <div class="at-main"></div>
+        </div>
+      </div>
+      <!-- Controls Footer -->
+      <div class="at-controls">
+        <!-- Hidden File Input & Open File Button -->
+        <input type="file" id="fileInput" accept=".gp,.gp3,.gp4,.gp5,.gpx,.xml,.musicxml,.alphatex" style="display: none;" />
+        <button id="openFileBtn"><i class="fas fa-folder-open"></i> Open File</button>
+
+        <button id="playPauseBtn"><i class="fas fa-play"></i> Play / Pause</button>
+        <button id="metronomeBtn">Metronome: Off</button>
+        <button id="countInBtn">Count-In: Off</button>
+        <button id="loopBtn">Looping: Off</button>
+        
+        <label for="speedSelect">Speed:</label>
+        <select id="speedSelect">
+          <option value="0.5">0.5x</option>
+          <option value="0.75">0.75x</option>
+          <option value="1" selected>1.0x</option>
+          <option value="1.25">1.25x</option>
+          <option value="1.5">1.5x</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Template for Track Items -->
+    <template id="at-track-template">
+      <div class="at-track">
+        <div class="at-track-icon">
+          <i class="fas fa-guitar"></i>
+        </div>
+        <div class="at-track-details">
+          <div class="at-track-name"></div>
+        </div>
+      </div>
+    </template>
+
+    <script type="text/javascript">
+      const wrapper = document.querySelector(".at-wrap");
+      const main = wrapper.querySelector(".at-main");
+
+      // alphaTab Initialization (Default Demo File ပါဝင်သည်)
+      const settings = {
+        file: "https://www.alphatab.net/files/canon.gp",
+        player: {
+          enablePlayer: true,
+          soundFont: "https://cdn.jsdelivr.net/npm/@coderline/alphatab@latest/dist/soundfont/sonivox.sf2",
+          scrollElement: wrapper.querySelector(".at-viewport")
+        }
+      };
+      const api = new alphaTab.AlphaTabApi(main, settings);
+
+      // ၁။ Open File System (ကွန်ပျူတာထဲမှ ဖိုင်များကို ရွေးချယ်ဖွင့်ခြင်း)
+      const openFileBtn = document.getElementById("openFileBtn");
+      const fileInput = document.getElementById("fileInput");
+
+      openFileBtn.onclick = () => {
+        fileInput.click();
+      };
+
+      fileInput.onchange = (e) => {
+        const file = e.target.files;
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const arrayBuffer = evt.target.result;
+          // alphaTab သို့ ဖိုင်ဒေတာ ပေးပို့ပြီး အသစ် ရေးဆွဲစေခြင်း
+          api.load(arrayBuffer);
+        };
+        reader.readAsArrayBuffer(file);
+      };
+
+      // ၂။ Play / Pause Control
+      const playPauseBtn = document.getElementById("playPauseBtn");
+      playPauseBtn.onclick = () => {
+        api.playPause();
+      };
+
+      // ၃။ Metronome Control
+      const metronomeBtn = document.getElementById("metronomeBtn");
+      metronomeBtn.onclick = () => {
+        if (api.metronomeVolume === 0) {
+          api.metronomeVolume = 1;
+          metronomeBtn.innerText = "Metronome: On";
+        } else {
+          api.metronomeVolume = 0;
+          metronomeBtn.innerText = "Metronome: Off";
+        }
+      };
+
+      // ၄။ Count-In Control
+      const countInBtn = document.getElementById("countInBtn");
+      countInBtn.onclick = () => {
+        if (api.countInVolume === 0) {
+          api.countInVolume = 1;
+          countInBtn.innerText = "Count-In: On";
+        } else {
+          api.countInVolume = 0;
+          countInBtn.innerText = "Count-In: Off";
+        }
+      };
+
+      // ၅။ Looping Control
+      const loopBtn = document.getElementById("loopBtn");
+      loopBtn.onclick = () => {
+        api.isLooping = !api.isLooping;
+        loopBtn.innerText = api.isLooping ? "Looping: On" : "Looping: Off";
+      };
+
+      // ၆။ Playback Speed Control
+      const speedSelect = document.getElementById("speedSelect");
+      speedSelect.onchange = () => {
+        api.playbackSpeed = parseFloat(speedSelect.value);
+      };
+
+      // Loading Overlay Logic
+      const overlay = wrapper.querySelector(".at-overlay");
+      api.renderStarted.on(() => {
+        overlay.style.display = "flex";
+      });
+      api.renderFinished.on(() => {
+        overlay.style.display = "none";
+      });
+
+      // Track Selector Logic
+      function createTrackItem(track) {
+        const trackItem = document
+          .querySelector("#at-track-template")
+          .content.cloneNode(true).firstElementChild;
+        trackItem.querySelector(".at-track-name").innerText = track.name;
+        trackItem.track = track;
+        trackItem.onclick = (e) => {
+          e.stopPropagation();
+          api.renderTracks([track]);
+        };
+        return trackItem;
+      }
+
+      const trackList = wrapper.querySelector(".at-track-list");
+      api.scoreLoaded.on((score) => {
+        trackList.innerHTML = "";
+        score.tracks.forEach((track) => {
+          trackList.appendChild(createTrackItem(track));
+        });
+      });
+
+      api.renderStarted.on(() => {
+        const tracks = new Map();
+        api.tracks.forEach((t) => {
+          tracks.set(t.index, t);
+        });
+
+        const trackItems = trackList.querySelectorAll(".at-track");
+        trackItems.forEach((trackItem) => {
+          if (tracks.has(trackItem.track.index)) {
+            trackItem.classList.add("active");
+          } else {
+            trackItem.classList.remove("active");
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
